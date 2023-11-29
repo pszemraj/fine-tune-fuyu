@@ -47,7 +47,7 @@ import model.fuyu as fuyu
 import model.lora as lora
 import utils
 from config import TrainingConfig, parse_training_args
-from utils import get_checkpoint_dir, get_output_dir, get_run_dir
+from utils import check_ampere_gpu, get_checkpoint_dir, get_output_dir, get_run_dir
 
 _here = Path(__file__).parent
 OUTPUT_DIR = get_output_dir()
@@ -453,8 +453,8 @@ def main():
     else:
         local_rank = 0
         world_size = 1
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
+
+    check_ampere_gpu()
     torch.cuda.set_device(local_rank)
     print(f"Initializing process group {local_rank}")
     dist.init_process_group("nccl", rank=local_rank, world_size=world_size)

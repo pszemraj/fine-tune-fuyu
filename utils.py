@@ -2,8 +2,10 @@ import cProfile
 import gc
 import glob
 import json
+import logging
 import os
 import random
+import subprocess
 from dataclasses import asdict
 from pathlib import Path
 
@@ -37,6 +39,36 @@ def get_latest_checkpoint_dir(run_name: str) -> str:
         step = max([int(s) for s in steps])
         checkpoint_dir = os.path.join(run_dir, f"step-{step}")
     return checkpoint_dir
+
+
+def check_ampere_gpu():
+    """Check if the GPU supports NVIDIA Ampere or later and enable FP32 in PyTorch if it does."""
+
+    # Check if CUDA is available
+    if not torch.cuda.is_available():
+        logging.info("No GPU detected, running on CPU.")
+        return
+
+    cmd = "nvidia-smi --query-gpu=name --format=csv,noheader"
+    try:
+        output = subprocess.check_output(cmd, shell=True, universal_newlines=True)
+        gpu_names = output.strip().split("\n")
+
+        # Supported GPU models list - roughly based on https://pytorch.org/docs/stable/cuda.html#cuda-ampere
+        supported_gpus = ["A100", "A6000", "RTX 30", "RTX 40", "A30", "A40"]
+
+        # Checking all GPUs
+        for gpu_name in gpu_names:
+            if any(supported_gpu in gpu_name for supported_gpu in supported_gpus):
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+                print(
+                    f"{gpu_name} supports NVIDIA Ampere or later, enabled TF32 in PyTorch."
+                )
+            else:
+                print(f"{gpu_name} does not support NVIDIA Ampere or later.")
+    except Exception as e:
+        logging.warning(f"Error occurred while checking GPU: {e}")
 
 
 def clear_mem():

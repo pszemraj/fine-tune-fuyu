@@ -16,6 +16,7 @@ import torch
 import torch.distributed as dist
 import transformers
 import wandb
+from natsort import natsorted
 from torch.distributed.fsdp.api import (
     CPUOffload,
     FullStateDictConfig,
@@ -96,11 +97,16 @@ def save_model(step, model, tokenizer, is_lora, local_rank):
     _remove_save_signal_file()
 
 
-def _cleanup_old_checkpoints():
+def _cleanup_old_checkpoints(keep_latest: int = 2):
+    """
+    _cleanup_old_checkpoints removes old checkpoints from the run directory
+
+    :param int keep_latest: Number of checkpoints to keep
+    """
     run_dir = get_run_dir()
-    checkpoints = sorted(glob.glob(os.path.join(run_dir, "step-*")))
+    checkpoints = natsorted(glob.glob(os.path.join(run_dir, "step-*")))
     # Keep only the latest two checkpoints
-    for checkpoint in checkpoints[:-2]:
+    for checkpoint in checkpoints[:-keep_latest]:
         step_to_delete = _extract_step_from_checkpoint(checkpoint)
         print(f"Deleting checkpoint {step_to_delete}")
         shutil.rmtree(get_checkpoint_dir(step_to_delete))

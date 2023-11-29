@@ -10,6 +10,7 @@ import time
 from contextlib import nullcontext
 from dataclasses import asdict
 from typing import Any, Dict, Optional
+from pathlib import Path
 
 import torch
 import torch.distributed as dist
@@ -48,8 +49,10 @@ import wandb
 from config import TrainingConfig, parse_training_args
 from utils import get_checkpoint_dir, get_run_dir
 
-OUTPUT_DIR = "/workspace/fine-tune-fuyu/output"
-SAVE_SIGNAL_FILE = "/root/should_save"
+_here = Path(__file__).parent
+OUTPUT_DIR = _here / "output"
+SAVE_SIGNAL_FILE = Path("/tmp/save_signal")
+OUTPUT_DIR.mkdir(exist_ok=True)
 
 
 def save_fsdp_model(step, model, tokenizer, local_rank):

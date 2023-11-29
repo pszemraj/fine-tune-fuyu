@@ -410,6 +410,10 @@ class Trainer:
 
         if self.local_rank == 0:
             wandb.log(eval_log)
+
+        # re-enable cache
+        self.model.language_model.config.use_cache = False
+        self.model.config.use_cache = False
         self.save_model("final")
 
     def eval(self, suffix: str) -> Dict[str, Any]:

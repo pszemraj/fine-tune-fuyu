@@ -55,36 +55,79 @@ SAVE_SIGNAL_FILE = Path("/tmp/save_signal")
 
 
 def save_fsdp_model(step, model, tokenizer, local_rank):
+    if local_rank != 0:
+        return  # Save operation only for the process with local_rank 0
+
+    print("Saving FSDP model.")
+    _save_full_state_dict(model)
+    _cleanup_old_checkpoints()
+    _save_model_and_tokenizer(model, tokenizer, step)
+
+
+def _save_full_state_dict(model):
     save_policy = FullStateDictConfig(offload_to_cpu=True, rank0_only=True)
     with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT, save_policy):
-        cpu_state = model.state_dict()
-    if local_rank == 0:
-        print("Saving model.")
-        run_dir = get_run_dir()
-        checkpoints = glob.glob(os.path.join(run_dir, "step-*"))
-        if len(checkpoints) >= 2:
-            steps = sorted([int(c.split("-")[-1]) for c in checkpoints])
-            for step_to_delete in steps[:-1]:
-                print(f"Deleting checkpoint {step_to_delete}")
-                shutil.rmtree(get_checkpoint_dir(step_to_delete))
+        return model.state_dict()
 
-        model.save_pretrained(get_checkpoint_dir(step), state_dict=cpu_state)
-        tokenizer.save_pretrained(get_checkpoint_dir(step))
+
+def _save_model_and_tokenizer(model, tokenizer, step, cpu_state=None):
+    checkpoint_dir = get_checkpoint_dir(step)
+    model.save_pretrained(checkpoint_dir, state_dict=cpu_state)
+    tokenizer.save_pretrained(checkpoint_dir)
 
 
 def save_model(step, model, tokenizer, is_lora, local_rank):
-    if local_rank == 0 and is_lora:
-        lora.save_lora_model(step, model, tokenizer)
+    if local_rank == 0:
+        # Cleanup old checkpoints for all model types
+        _cleanup_old_checkpoints()
+
+        if is_lora:
+            lora.save_lora_model(step, model, tokenizer)
+        else:
+            _save_model_and_tokenizer(model, tokenizer, step)
+
+    # Check the model type and call the appropriate save function
     if isinstance(model, FSDP):
         save_fsdp_model(step, model, tokenizer, local_rank)
     elif isinstance(model, DDP) and local_rank == 0:
-        model_path = os.path.join(get_checkpoint_dir(step), "pytorch_model.bin")
-        torch.save(model.state_dict(), model_path)
-    else:
-        model.save_pretrained(get_checkpoint_dir(step))
-        tokenizer.save_pretrained(get_checkpoint_dir(step))
+        _save_ddp_model(model, step)
 
-    if local_rank == 0 and os.path.exists(SAVE_SIGNAL_FILE):
+    # Remove the save signal file if it exists
+    _remove_save_signal_file(local_rank)
+
+
+def _cleanup_old_checkpoints():
+    run_dir = get_run_dir()
+    checkpoints = sorted(glob.glob(os.path.join(run_dir, "step-*")))
+    # Keep only the latest two checkpoints
+    for checkpoint in checkpoints[:-2]:
+        step_to_delete = _extract_step_from_checkpoint(checkpoint)
+        print(f"Deleting checkpoint {step_to_delete}")
+        shutil.rmtree(get_checkpoint_dir(step_to_delete))
+
+
+# ... other helper functions remain the same ...
+
+
+def _extract_step_from_checkpoint(checkpoint):
+    return int(checkpoint.split("-")[-1])
+
+
+# ... other helper functions remain the same ...
+def _handle_local_rank_zero_tasks(step, model, tokenizer, is_lora):
+    if is_lora:
+        lora.save_lora_model(step, model, tokenizer)
+    else:
+        _save_model_and_tokenizer(model, tokenizer, step)
+
+
+def _save_ddp_model(model, step):
+    model_path = os.path.join(get_checkpoint_dir(step), "pytorch_model.bin")
+    torch.save(model.state_dict(), model_path)
+
+
+def _remove_save_signal_file():
+    if os.path.exists(SAVE_SIGNAL_FILE):
         os.remove(SAVE_SIGNAL_FILE)
 
 

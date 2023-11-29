@@ -14,10 +14,11 @@ from torch.utils.data import DataLoader, Dataset, DistributedSampler
 from tqdm import tqdm
 from transformers import FuyuImageProcessor, FuyuProcessor
 
-from . import data as fuyu_data
 import utils
 from config import TrainingConfig
 from data.sampler import PackedDistributedBatchSampler
+
+from . import data as fuyu_data
 
 AI2D_DATA_DIR = "/workspace/ai2d"
 FONT_PATH = "/workspace/Arial.ttf"

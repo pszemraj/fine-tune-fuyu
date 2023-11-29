@@ -163,7 +163,7 @@ def load_model(
 
 
 def load_config(run_name: str) -> TrainingConfig:
-    with open(f"{OUTPUT_DIR}/{run_name}/config.json", "r") as f:
+    with open(f"{str(OUTPUT_DIR.resolve())}/{run_name}/config.json", "r") as f:
         config = json.loads(f.read())
     return TrainingConfig(**config)
 
@@ -195,23 +195,21 @@ def get_optimizer(model, max_train_steps: int, config: TrainingConfig):
     if config.lora:
         opt_params = [
             {
-                "params": [
-                    p
-                    for n, p in model.named_parameters()
-                    if "lora" in n
-                ],
-                "learning_rate": config.learning_rate
+                "params": [p for n, p in model.named_parameters() if "lora" in n],
+                "learning_rate": config.learning_rate,
             },
         ]
         if config.patch_prediction:
-            opt_params.append({
-                "params": [
-                    p
-                    for n, p in model.named_parameters()
-                    if "next_patch_predictor" in n
-                ],
-                "learning_rate": config.learning_rate * 10
-            })
+            opt_params.append(
+                {
+                    "params": [
+                        p
+                        for n, p in model.named_parameters()
+                        if "next_patch_predictor" in n
+                    ],
+                    "learning_rate": config.learning_rate * 10,
+                }
+            )
     else:
         opt_params = [
             {
@@ -347,7 +345,7 @@ class Trainer:
             optimizer.step()
             optimizer.zero_grad()
             lr_scheduler.step()
-        except torch.cuda.OutOfMemoryError as e:
+        except torch.cuda.OutOfMemoryError:
             print("OOM on inputs with shape", batch["input_ids"].shape)
             gc.collect()
             with torch.no_grad():
@@ -460,7 +458,9 @@ def main():
     torch.cuda.set_device(local_rank)
     print(f"Initializing process group {local_rank}")
     dist.init_process_group("nccl", rank=local_rank, world_size=world_size)
-    model, tokenizer = load_model(config, device_map=None, local_rank=local_rank, training=True)
+    model, tokenizer = load_model(
+        config, device_map=None, local_rank=local_rank, training=True
+    )
     if local_rank == 0:
         print(model)
     if config.dataset == "ai2d":

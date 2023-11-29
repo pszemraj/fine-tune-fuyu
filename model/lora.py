@@ -1,6 +1,6 @@
+import glob
 import os
 import shutil
-import glob
 
 import torch
 from peft import PeftModel, get_peft_model
@@ -14,9 +14,13 @@ def save_lora_model(step, model, tokenizer):
     model_path = os.path.join(get_checkpoint_dir(step), "adapter_model")
     model.save_pretrained(model_path)
     tokenizer.save_pretrained(get_checkpoint_dir(step))
-    if hasattr(model.base_model, 'next_patch_predictor'):
-        patch_predictor_path = os.path.join(get_checkpoint_dir(step), "patch_predictor.pt")
-        torch.save(model.base_model.next_patch_predictor.state_dict(), patch_predictor_path)
+    if hasattr(model.base_model, "next_patch_predictor"):
+        patch_predictor_path = os.path.join(
+            get_checkpoint_dir(step), "patch_predictor.pt"
+        )
+        torch.save(
+            model.base_model.next_patch_predictor.state_dict(), patch_predictor_path
+        )
 
     checkpoints = glob.glob(os.path.join(get_run_dir(), "step-*"))
     if len(checkpoints) > 2:
@@ -29,8 +33,10 @@ def save_lora_model(step, model, tokenizer):
 def get_lora_model(model, checkpoint_dir: str, config: ModelConfig, training: bool):
     maybe_checkpoint_path = os.path.join(checkpoint_dir, "adapter_model")
     if os.path.exists(maybe_checkpoint_path):
-        model = PeftModel.from_pretrained(model, maybe_checkpoint_path, is_trainable=training)
-        if hasattr(model.get_base_model(), 'next_patch_predictor'):
+        model = PeftModel.from_pretrained(
+            model, maybe_checkpoint_path, is_trainable=training
+        )
+        if hasattr(model.get_base_model(), "next_patch_predictor"):
             patch_predictor_path = os.path.join(checkpoint_dir, "patch_predictor.pt")
             if os.path.exists(patch_predictor_path):
                 model.get_base_model().next_patch_predictor.load_state_dict(

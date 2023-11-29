@@ -6,6 +6,7 @@ from tqdm import tqdm
 from transformers import FuyuImageProcessor, FuyuProcessor
 
 from config import TrainingConfig
+
 from .data import FuyuCollator, FuyuMultiAnswerCollator
 
 

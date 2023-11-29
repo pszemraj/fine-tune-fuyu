@@ -183,10 +183,12 @@ class FuyuWithPatchPrediction(FuyuPreTrainedModel):
     def get_patch_prediction_loss(batch, patch_predictions):
         criterion = torch.nn.HuberLoss()
         loss = 0
-        for i in range(len(batch['image_patches'])):
-            indices = batch['image_patches_indices'][i]
+        for i in range(len(batch["image_patches"])):
+            indices = batch["image_patches_indices"][i]
             shifted_indices = indices[1:]
             shifted_predictions = patch_predictions[i][:-1][shifted_indices >= 0]
-            shifted_targets = batch['image_patches'][i][0, 1:, :]
-            loss += criterion(shifted_predictions, shifted_targets.to(shifted_predictions.dtype))
+            shifted_targets = batch["image_patches"][i][0, 1:, :]
+            loss += criterion(
+                shifted_predictions, shifted_targets.to(shifted_predictions.dtype)
+            )
         return loss

@@ -1,14 +1,15 @@
 import json
 import os
+import random
 from collections import Counter
 from typing import Dict
-import random
 
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset, DistributedSampler
 from transformers import FuyuImageProcessor, FuyuProcessor
 
 from config import TrainingConfig
+
 from .data import FuyuCollator
 
 

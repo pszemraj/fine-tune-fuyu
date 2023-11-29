@@ -5,16 +5,26 @@ import json
 import os
 import random
 from dataclasses import asdict
+from pathlib import Path
 
 import numpy as np
 import torch
 import torch.distributed as dist
+import wandb
 from PIL import Image
 
-import wandb
 from config import TrainingConfig
 
-OUTPUT_DIR = "/workspace/fine-tune-fuyu/output"
+
+def get_output_dir():
+    _here = Path(__file__).parent
+
+    OUTPUT_DIR = _here / "output"
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    return OUTPUT_DIR.resolve()
+
+
+OUTPUT_DIR = get_output_dir()
 
 
 def get_latest_checkpoint_dir(run_name: str) -> str:
@@ -108,7 +118,7 @@ def unpatchify_image(patches, h, w, patch_h=30, patch_w=30):
     scaled = (((imarr + 1) / 2) * 255).astype(np.uint8)
     return Image.fromarray(scaled)
 
-        
+
 # use 1011 and 1019 for slim tokenizer.
 def get_image_from_inputs(
     inputs,

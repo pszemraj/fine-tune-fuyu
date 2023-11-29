@@ -106,19 +106,8 @@ def _cleanup_old_checkpoints():
         shutil.rmtree(get_checkpoint_dir(step_to_delete))
 
 
-# ... other helper functions remain the same ...
-
-
 def _extract_step_from_checkpoint(checkpoint):
     return int(checkpoint.split("-")[-1])
-
-
-# ... other helper functions remain the same ...
-def _handle_local_rank_zero_tasks(step, model, tokenizer, is_lora):
-    if is_lora:
-        lora.save_lora_model(step, model, tokenizer)
-    else:
-        _save_model_and_tokenizer(model, tokenizer, step)
 
 
 def _save_ddp_model(model, step):

@@ -322,6 +322,7 @@ class Trainer:
             if wandb.run is None:
                 raise Exception
             save_config(self.config, wandb.run.name)
+            wandb.watch(self.model, log="all")
 
     def throughput(self, batch):
         end_time = time.perf_counter()

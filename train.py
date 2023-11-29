@@ -1,6 +1,6 @@
 import argparse
-import gc
 import functools
+import gc
 import glob
 import json
 import os
@@ -9,12 +9,13 @@ import shutil
 import time
 from contextlib import nullcontext
 from dataclasses import asdict
-from typing import Any, Dict, Optional
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 import torch
 import torch.distributed as dist
 import transformers
+import wandb
 from torch.distributed.fsdp.api import (
     CPUOffload,
     FullStateDictConfig,
@@ -38,21 +39,19 @@ from transformers.models.persimmon.modeling_persimmon import (
     PersimmonLMHead,
 )
 
-import eval
-import model.fuyu as fuyu
-import model.lora as lora
 import data.ai2d as ai2d
 import data.scienceqa as scienceqa
 import data.textvqa as textvqa
+import eval
+import model.fuyu as fuyu
+import model.lora as lora
 import utils
-import wandb
 from config import TrainingConfig, parse_training_args
-from utils import get_checkpoint_dir, get_run_dir
+from utils import get_checkpoint_dir, get_output_dir, get_run_dir
 
 _here = Path(__file__).parent
-OUTPUT_DIR = _here / "output"
+OUTPUT_DIR = get_output_dir()
 SAVE_SIGNAL_FILE = Path("/tmp/save_signal")
-OUTPUT_DIR.mkdir(exist_ok=True)
 
 
 def save_fsdp_model(step, model, tokenizer, local_rank):

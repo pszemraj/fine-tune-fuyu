@@ -93,7 +93,7 @@ def save_model(step, model, tokenizer, is_lora, local_rank):
         _save_ddp_model(model, step)
 
     # Remove the save signal file if it exists
-    _remove_save_signal_file(local_rank)
+    _remove_save_signal_file()
 
 
 def _cleanup_old_checkpoints():

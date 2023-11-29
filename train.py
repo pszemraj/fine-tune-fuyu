@@ -318,7 +318,7 @@ class Trainer:
             save_config(self.config, wandb.run.name)
 
     def throughput(self, batch):
-        end_time = time.time()
+        end_time = time.perf_counter()
         tokens = torch.tensor(
             batch["input_ids"].shape[0] * batch["input_ids"].shape[1]
         ).to(self.local_rank)
@@ -337,7 +337,7 @@ class Trainer:
                 )
             wandb.log({"throughput": throughput}, step=self.completed_steps)
             self.throughput_counter = 0
-            self.throughput_start_time = time.time()
+            self.throughput_start_time = time.perf_counter()
 
     def _profile_train_loop(self):
         with profile(profile_memory=True, record_shapes=True, with_stack=True) as prof:
@@ -408,7 +408,7 @@ class Trainer:
         self._init_tracking()
         self.completed_steps: int = 0
         self.throughput_counter = 0
-        self.throughput_start_time = time.time()
+        self.throughput_start_time = time.perf_counter()
         dist.barrier()
 
         if config.profile:
@@ -472,7 +472,10 @@ class Trainer:
 
 def main():
     local_rank = int(os.environ["LOCAL_RANK"])
-    parser = argparse.ArgumentParser(description="Fine-tune Fuyu models.")
+    parser = argparse.ArgumentParser(
+        description="Fine-tune Fuyu models.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     config = parse_training_args(parser)
     if config.run_name is not None:
         print(f"Loading config from {config.run_name}")

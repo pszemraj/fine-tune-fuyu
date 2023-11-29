@@ -502,6 +502,7 @@ def main():
     else:
         raise ValueError(f"Unknown dataset {config.dataset}")
 
+    print(f"Output dir: {config.output_dir}")
     optimizer, lr_scheduler = get_optimizer(model, max_train_steps, config)
     trainer = Trainer(
         model=model,
@@ -516,6 +517,7 @@ def main():
         config=config,
     )
     trainer.train()
+    print(f"Output dir: {config.output_dir}")
 
 
 if __name__ == "__main__":

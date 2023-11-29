@@ -48,7 +48,13 @@ import model.fuyu as fuyu
 import model.lora as lora
 import utils
 from config import TrainingConfig, parse_training_args
-from utils import check_ampere_gpu, get_checkpoint_dir, get_output_dir, get_run_dir
+from utils import (
+    check_ampere_gpu,
+    get_checkpoint_dir,
+    get_output_dir,
+    get_run_dir,
+    print_trainable_parameters,
+)
 
 _here = Path(__file__).parent
 OUTPUT_DIR = get_output_dir()
@@ -151,7 +157,7 @@ def load_model(
             torch_dtype=torch.bfloat16,
             use_flash_attention_2=config.use_flash_attn,
             device_map=device_map,
-        )
+        ).train()
 
     # Avoid conflicts with gradient checkpointing.
     if config.gradient_checkpointing:
@@ -545,6 +551,7 @@ def main():
         raise ValueError(f"Unknown dataset {config.dataset}")
 
     print(f"Output dir: {str(OUTPUT_DIR.resolve())}")
+    print_trainable_parameters(model)
     optimizer, lr_scheduler = get_optimizer(model, max_train_steps, config)
     trainer = Trainer(
         model=model,

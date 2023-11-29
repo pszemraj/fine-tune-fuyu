@@ -204,8 +204,8 @@ def save_config(config: TrainingConfig, run_name: str):
     run_dir = get_run_dir(run_name)
     if not os.path.exists(run_dir):
         os.makedirs(run_dir)
-        with open(os.path.join(run_dir, "config.json"), "w") as f:
-            f.write(json.dumps(asdict(config)))
+        with open(os.path.join(run_dir, "config.json"), "w", encoding="utf-8") as f:
+            json.dump(asdict(config), f, ensure_ascii=False, indent=4)
 
 
 def get_parameter_names(model, forbidden_layer_types):

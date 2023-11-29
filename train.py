@@ -115,9 +115,9 @@ def _save_ddp_model(model, step):
     torch.save(model.state_dict(), model_path)
 
 
-def _remove_save_signal_file():
-    if os.path.exists(SAVE_SIGNAL_FILE):
-        os.remove(SAVE_SIGNAL_FILE)
+def _remove_save_signal_file(signal_file_path=SAVE_SIGNAL_FILE):
+    if os.path.exists(signal_file_path):
+        os.remove(signal_file_path)
 
 
 def load_model(

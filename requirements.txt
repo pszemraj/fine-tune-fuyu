@@ -1,6 +1,7 @@
-wandb
-scipy
-peft
-transformers @ git+https://github.com/phillip-kravtsov/transformers@b8000bd8d619cbbedcb806b67faa68c2300b4bd0
-matplotlib
 datasets
+matplotlib
+natsort
+peft
+scipy
+transformers @ git+https://github.com/phillip-kravtsov/transformers@b8000bd8d619cbbedcb806b67faa68c2300b4bd0
+wandb

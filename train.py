@@ -77,16 +77,22 @@ def save_model(step, model, tokenizer, is_lora, local_rank):
         lora.save_lora_model(step, model, tokenizer)
     if isinstance(model, FSDP):
         save_fsdp_model(step, model, tokenizer, local_rank)
-    if isinstance(model, DDP) and local_rank == 0:
+    elif isinstance(model, DDP) and local_rank == 0:
         model_path = os.path.join(get_checkpoint_dir(step), "pytorch_model.bin")
         torch.save(model.state_dict(), model_path)
+    else:
+        model.save_pretrained(get_checkpoint_dir(step))
+        tokenizer.save_pretrained(get_checkpoint_dir(step))
+
     if local_rank == 0 and os.path.exists(SAVE_SIGNAL_FILE):
         os.remove(SAVE_SIGNAL_FILE)
 
 
-def load_model(config: TrainingConfig, training: bool, device_map=None, local_rank=None):
+def load_model(
+    config: TrainingConfig, training: bool, device_map=None, local_rank=None
+):
     model_path = config.model_name_or_path
-    tokenizer = transformers.AutoTokenizer.from_pretrained('fuyu-8b-slim-vocab')
+    tokenizer = transformers.AutoTokenizer.from_pretrained(config.model_name_or_path)
     vocab = tokenizer.get_vocab()
     tokenizer.get_vocab = lambda: vocab
 

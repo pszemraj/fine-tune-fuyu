@@ -1,3 +1,13 @@
+"""
+train.py - Train Fuyu models
+
+Usage:
+    Relevant flags etc are in config.py
+
+    Or,
+
+    python train.py --help
+"""
 import argparse
 import functools
 import gc
@@ -48,13 +58,7 @@ import model.fuyu as fuyu
 import model.lora as lora
 import utils
 from config import TrainingConfig, parse_training_args
-from utils import (
-    check_ampere_gpu,
-    get_checkpoint_dir,
-    get_output_dir,
-    get_run_dir,
-    print_trainable_parameters,
-)
+from utils import check_ampere_gpu, get_checkpoint_dir, get_output_dir, get_run_dir
 
 _here = Path(__file__).parent
 OUTPUT_DIR = get_output_dir()
@@ -135,15 +139,38 @@ def _remove_save_signal_file(signal_file_path=SAVE_SIGNAL_FILE):
 def load_model(
     config: TrainingConfig, training: bool, device_map=None, local_rank=None
 ):
+    """
+    Load the model based on the provided configuration.
+
+    Args:
+        config (TrainingConfig): The configuration object for training.
+        training (bool): Indicates if the model is being loaded for training.
+        device_map (optional): The device map for distributed training.
+        local_rank (optional): The rank of the local process in distributed training.
+
+    Returns:
+        Tuple: A tuple containing the loaded model and the tokenizer.
+    """
+    # Get the model path from the configuration
     model_path = config.model_name_or_path
+
+    # Create the tokenizer using the model name or path
     tokenizer = transformers.AutoTokenizer.from_pretrained(config.model_name_or_path)
+
+    # Get the vocabulary from the tokenizer
     vocab = tokenizer.get_vocab()
+
+    # Override the get_vocab function of the tokenizer to return the obtained vocabulary
     tokenizer.get_vocab = lambda: vocab
 
+    # Set the device map to the current CUDA device if it is not provided
     if device_map is None:
         device_map = f"cuda:{torch.cuda.current_device()}"
+
+    # Load the model based on the configuration
     if config.patch_prediction:
         print("Loading patch prediction model")
+        # Create an instance of the FuyuWithPatchPrediction model with the specified parameters
         model = fuyu.FuyuWithPatchPrediction.from_pretrained(
             model_path,
             torch_dtype=torch.bfloat16,
@@ -152,6 +179,7 @@ def load_model(
         )
     else:
         print("loading non-patch causal lm")
+        # Create an instance of the FuyuForCausalLM model with the specified parameters
         model = transformers.FuyuForCausalLM.from_pretrained(
             model_path,
             torch_dtype=torch.bfloat16,
@@ -159,21 +187,27 @@ def load_model(
             device_map=device_map,
         ).train()
 
-    # Avoid conflicts with gradient checkpointing.
+    # Disable cache for gradient checkpointing
     if config.gradient_checkpointing:
         model.language_model.config.use_cache = False
         model.config.use_cache = False
 
+        # Enable gradient checkpointing for the model
         model.language_model.model.gradient_checkpointing_enable()
         model.gradient_checkpointing_enable()
 
+    # Update the model path if a run name is provided in the configuration
     if config.run_name is not None:
         model_path = utils.get_latest_checkpoint_dir(config.run_name)
+
+    # Add additional functionality based on the configuration
     if config.lora:
+        # Get the LoRA model based on the provided model and configuration
         model = lora.get_lora_model(model, model_path, config, training)
     elif config.run_name is not None:
         raise NotImplementedError("Resuming full runs not yet implemented.")
 
+    # Wrap the model in FSDP if specified in the configuration
     if config.fsdp:
         print("Wrapping model in FSDP.")
         auto_wrap_policy = functools.partial(
@@ -202,7 +236,11 @@ def load_model(
             ),
         )
     elif config.ddp:
-        model = DDP(model, device_ids=[local_rank])
+        print("Wrapping model in DDP.")
+        model = DDP(model, device_ids=[local_rank], find_unused_parameters=True)
+
+    # TODO: compile model?
+
     return model, tokenizer
 
 
@@ -291,6 +329,10 @@ def get_optimizer(model, max_train_steps: int, config: TrainingConfig):
 
 
 class Trainer:
+    """
+    Trainer for the Fuyu model.
+    """
+
     def __init__(
         self,
         model,
@@ -484,6 +526,9 @@ class Trainer:
 
 
 def main():
+    """
+    main function to run training
+    """
     local_rank = int(os.environ["LOCAL_RANK"])
     parser = argparse.ArgumentParser(
         description="Fine-tune Fuyu models.",
@@ -551,7 +596,6 @@ def main():
         raise ValueError(f"Unknown dataset {config.dataset}")
 
     print(f"Output dir: {str(OUTPUT_DIR.resolve())}")
-    print_trainable_parameters(model)
     optimizer, lr_scheduler = get_optimizer(model, max_train_steps, config)
     trainer = Trainer(
         model=model,
